@@ -1,0 +1,5 @@
+{
+  "name": "Verity",
+  "description": "Check that a download is exactly the file its publisher released: SHA-256, SHA-512, SHA-1, MD5 and CRC32 in WebAssembly, in your browser. Nothing is uploaded.",
+  "category": "developer-tools"
+}

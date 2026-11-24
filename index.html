@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verity · check a download's checksum</title>
+    <meta
+      name="description"
+      content="Check that a downloaded file is exactly the one its publisher released: SHA-256, SHA-512, SHA-1, MD5 and CRC32, computed in your browser with WebAssembly. Nothing is uploaded."
+    />
+    <meta name="theme-color" content="#f5f6f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1312" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <a class="skip-link" href="#file-step">Skip to the file</a>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Verity</span></div>
+      <button type="button" class="btn btn-icon" id="theme" aria-label="Switch to dark theme"></button>
+    </header>
+
+    <main class="page">
+      <section class="intro">
+        <h1>Check that a download is exactly what it claims to be.</h1>
+        <p class="lede">
+          Pick the file and paste the checksum from its download page. Verity computes it here in your browser with
+          WebAssembly and tells you if they match. The file is never uploaded, however large it is.
+        </p>
+      </section>
+
+      <div class="steps">
+        <section class="card" id="file-step" aria-labelledby="file-title" tabindex="-1">
+          <h2 class="card-title" id="file-title"><span class="step" aria-hidden="true">1</span>The file</h2>
+          <div class="drop" id="drop">
+            <input type="file" id="file" multiple class="sr-only" />
+            <span class="drop-icon" data-icon="file" aria-hidden="true"></span>
+            <p class="drop-title"><label for="file" class="link-like">Choose a file</label> or drop it here</p>
+            <p class="hint">Any size, several at once if you like. Read in pieces, never uploaded.</p>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="sum-title">
+          <h2 class="card-title" id="sum-title"><span class="step" aria-hidden="true">2</span>The checksum it should have</h2>
+          <label class="field-label" for="expected">Paste it from the download page: one value, a line of SHA256SUMS, or the whole file</label>
+          <textarea id="expected" class="mono" rows="3" spellcheck="false" autocomplete="off" placeholder="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" aria-describedby="expected-info"></textarea>
+          <p class="hint" id="expected-info" aria-live="polite">Optional. Without it, Verity shows the checksums for you to compare.</p>
+          <fieldset class="algorithms">
+            <legend class="field-label">Compute</legend>
+            <div class="chips" id="algorithms"></div>
+          </fieldset>
+        </section>
+      </div>
+
+      <section class="results" id="results" aria-labelledby="results-title" hidden>
+        <h2 class="section-title" id="results-title">Results</h2>
+        <ol class="result-list" id="result-list"></ol>
+      </section>
+
+      <section class="card text-card" aria-labelledby="text-title">
+        <h2 class="card-title" id="text-title">Or hash some text</h2>
+        <label class="field-label" for="text">Text (UTF-8)</label>
+        <textarea id="text" rows="2" spellcheck="false" placeholder="Type or paste text"></textarea>
+        <dl class="digests" id="text-digests"></dl>
+      </section>
+
+      <section class="faq" aria-labelledby="faq-title">
+        <h2 class="section-title" id="faq-title">Good to know</h2>
+        <details>
+          <summary>Why check a checksum?</summary>
+          <p>A checksum is a fingerprint of a file. If even one byte differs, the fingerprint changes completely. Checking it tells you the download was not damaged and is the file the publisher put the checksum next to.</p>
+        </details>
+        <details>
+          <summary>Which one should I use?</summary>
+          <p>Use what the download page gives, preferably SHA-256 or SHA-512. MD5 and SHA-1 still catch damaged downloads, but someone determined can make two different files with the same MD5 or SHA-1, so do not rely on them against tampering. CRC32 is the quick check zip and gzip use.</p>
+        </details>
+        <details>
+          <summary>Is my file sent anywhere?</summary>
+          <p>No. Verity reads the file in pieces on this page and computes the checksums in WebAssembly, in your browser. It makes no network request with your file or your checksums, and it stores nothing but your theme choice.</p>
+        </details>
+      </section>
+    </main>
+
+    <footer class="footer"><p>Verity is open source (MIT). The checksums are computed by a 6 KB WebAssembly module written in AssemblyScript.</p></footer>
+    <div class="drop-overlay" id="drop-overlay" hidden aria-hidden="true"><p>Drop to check</p></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
