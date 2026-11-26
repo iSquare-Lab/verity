@@ -118,6 +118,7 @@ describe("checking files", () => {
     await choose(new File(["x"], "a.iso"));
     finish({sha256: GOOD});
     expect(verdictOf(results()[0])).toBe("Does not match.");
+    expect(results()[0].querySelector(".expected-line mark")?.textContent).toBe("6"); // The last character differs.
     paste("not a checksum");
     expect(results()[0].querySelectorAll(".verdict")).toHaveLength(1);
     expect(verdictOf(results()[0])).toMatch(/^Nothing to compare yet/);

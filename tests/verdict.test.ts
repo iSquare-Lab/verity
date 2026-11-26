@@ -61,7 +61,7 @@ describe("verdictText", () => {
   it("reports a match in green and a mismatch in red with the position and the expected value", () => {
     expect(verdictText({kind: "match", algorithm: "sha256"}, "a.iso")).toMatchObject({tone: "good", title: "Matches: the SHA-\u2060256 is identical."});
     const bad = verdictText({kind: "mismatch", algorithm: "sha512", expected: BAD, at: 9}, "a.iso");
-    expect(bad).toMatchObject({tone: "bad", title: "Does not match.", expected: BAD});
+    expect(bad).toMatchObject({tone: "bad", title: "Does not match.", expected: BAD, at: 9});
     expect(bad.detail).toContain("differs from character 10 on");
   });
 

@@ -260,7 +260,13 @@ function verdictBox(text: ReturnType<typeof verdictText>): HTMLElement {
   const box = el("div", `verdict verdict-${text.tone}`);
   const words = el("div");
   words.append(el("b", undefined, text.title), el("span", undefined, text.detail));
-  if (text.expected) words.append(el("p", "mono expected-line", `Expected ${text.expected}`));
+  if (text.expected) {
+    // The pasted value, with the first character that differs marked.
+    const at = text.at ?? 0;
+    const line = el("p", "mono expected-line", `Expected ${text.expected.slice(0, at)}`);
+    line.append(el("mark", undefined, text.expected.slice(at, at + 1)), text.expected.slice(at + 1));
+    words.append(line);
+  }
   box.innerHTML = text.tone === "good" ? icons.check : text.tone === "bad" ? icons.cross : icons.info;
   box.append(words);
   return box;

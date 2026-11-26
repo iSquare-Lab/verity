@@ -41,8 +41,9 @@ export interface VerdictText {
   tone: "good" | "bad" | "info";
   title: string;
   detail: string;
-  /** The pasted value, shown under a mismatch. */
+  /** The pasted value, shown under a mismatch, and where it first differs from the computed one. */
   expected?: string;
+  at?: number;
 }
 
 /** An algorithm name that never breaks at its hyphen ("SHA-" / "256") when the line wraps. */
@@ -102,6 +103,7 @@ export function verdictText(verdict: Verdict, fileName: string | null): VerdictT
             ? `The ${name} differs from character ${verdict.at + 1} on.`
             : `The ${name} differs from character ${verdict.at + 1} on. The file is damaged or is not the one published: download it again from the official page.`,
         expected: verdict.expected,
+        at: verdict.at,
       };
     }
   }
