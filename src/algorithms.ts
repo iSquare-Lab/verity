@@ -72,21 +72,26 @@ export function parseLine(line: string): ExpectedSum | null {
   return {hex: gnu[1].toLowerCase(), algorithm, ...(gnu[2] ? {fileName: gnu[2].trim()} : {})};
 }
 
+/** Line ends from any system: \r\n, \n, or a lone \r. */
+const LINE_BREAK = /\r\n|\r|\n/;
+
 /** Every checksum in pasted text (one per line), skipping lines that are not checksums. */
 export function parseSums(text: string): ExpectedSum[] {
-  return text.split(/\r?\n/).map(parseLine).filter((sum): sum is ExpectedSum => sum !== null);
+  return text.split(LINE_BREAK).map(parseLine).filter((sum): sum is ExpectedSum => sum !== null);
 }
 
 /** A file name without its folders: "./dl/a.iso" → "a.iso". */
 const baseName = (name: string) => name.replace(/^.*[\\/]/, "");
 
-/** The checksum that applies to a file: the one naming it, or the only one when none names a file. */
+/**
+ * The checksum that applies to a file: the one naming it, or the only value that names no file. A line naming
+ * another file never applies, even when it is the only one.
+ */
 export function sumFor(sums: readonly ExpectedSum[], fileName: string): ExpectedSum | null {
   const named = sums.find((sum) => sum.fileName && baseName(sum.fileName) === baseName(fileName));
   if (named) return named;
   const unnamed = sums.filter((sum) => !sum.fileName);
-  if (unnamed.length === 1) return unnamed[0];
-  return sums.length === 1 ? sums[0] : null;
+  return unnamed.length === 1 ? unnamed[0] : null;
 }
 
 /** Only files this small are read to see whether they are a list of checksums. */
@@ -103,7 +108,7 @@ const SUMS_FILE_NAMES = [/^(sha(1|256|512)|md5|crc32)?sums?(\.txt)?$/i, /checksu
 export function isSumsList(fileName: string, text: string): boolean {
   if (SUMS_FILE_NAMES.some((pattern) => pattern.test(baseName(fileName)))) return parseSums(text).length > 0;
   const lines = text
-    .split(/\r?\n/)
+    .split(LINE_BREAK)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"));
   return lines.length > 0 && lines.every((line) => parseLine(line)?.fileName !== undefined);

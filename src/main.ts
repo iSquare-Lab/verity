@@ -19,7 +19,8 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
 // ------------------------------------------------------------ Announcements
 
 // One polite live region that stays in the page; results change its text so screen readers say them. Several
-// verdicts in a row (or a checksum being typed) are gathered and only the last state is read.
+// verdicts in a row (or a checksum being typed) are gathered and only the last state is read. The region is
+// emptied first and filled a moment later, so the same verdict twice in a row is read again.
 const live = $("announce");
 let announceTimer = 0;
 const announcements = new Map<string, string>();
@@ -28,8 +29,11 @@ function announce(key: string, text: string): void {
   announcements.set(key, text);
   clearTimeout(announceTimer);
   announceTimer = window.setTimeout(() => {
-    live.textContent = [...announcements.values()].join(" ");
-    announcements.clear();
+    live.textContent = "";
+    announceTimer = window.setTimeout(() => {
+      live.textContent = [...announcements.values()].join(" ");
+      announcements.clear();
+    }, 50);
   }, 400);
 }
 
@@ -155,19 +159,16 @@ function readExpected(): void {
 
 /** Sorts out what someone chose or dropped: a small checksum list fills step 2; every other file is checked. */
 async function takeFiles(files: readonly File[]): Promise<void> {
-  const toHash: File[] = [];
-  for (const file of files) {
-    if (file.size <= SUMS_FILE_MAX_BYTES) {
-      const text = await file.text();
-      if (isSumsList(file.name, text)) {
-        expectedArea.value = text.trim();
-        readExpected();
-        continue;
-      }
-    }
-    toHash.push(file);
+  // Only small files can be lists; they are all read at once, and large files are not read here at all.
+  const lists = await Promise.all(
+    files.map(async (file) => file.size <= SUMS_FILE_MAX_BYTES && isSumsList(file.name, await file.text())),
+  );
+  for (const [i, file] of files.entries()) {
+    if (!lists[i]) continue;
+    expectedArea.value = (await file.text()).trim();
+    readExpected();
   }
-  hashFiles(toHash);
+  hashFiles(files.filter((_, i) => !lists[i]));
 }
 
 function hashFiles(files: readonly File[]): void {
@@ -294,17 +295,22 @@ let textJob: TextJob | null = null;
 let textDigests: Digests | null = null;
 let textTimer = 0;
 
+/** Empties the text card's results, and shows `info` under the text box (in red for an error). */
+function resetTextResults(info: string, isError = false): void {
+  textDigests = null;
+  $("text-info").textContent = info;
+  $("text-info").classList.toggle("hint-bad", isError);
+  $("text-verdict").replaceChildren();
+  $("text-digests").replaceChildren();
+}
+
 function hashText(): void {
   clearTimeout(textTimer);
   if (textJob) jobs.delete(textJob.id); // An older answer is dropped when it arrives.
   textJob = null;
   const text = textArea.value;
   if (!text) {
-    textDigests = null;
-    $("text-info").textContent = "Hashed with the algorithms picked under Compute, and compared with a pasted checksum.";
-    $("text-info").classList.remove("hint-bad");
-    $("text-verdict").replaceChildren();
-    $("text-digests").replaceChildren();
+    resetTextResults("Hashed with the algorithms picked under Compute, and compared with a pasted checksum.");
     return;
   }
   const bytes = new TextEncoder().encode(text);
@@ -312,6 +318,7 @@ function hashText(): void {
   jobs.set(textJob.id, textJob);
   send({type: "hash", id: textJob.id, blob: new Blob([bytes]), algorithms: chosenAlgorithms()});
   $("text-info").textContent = `${formatBytes(bytes.length)} as UTF-8${bytes.length !== text.length ? ` (${text.length} characters)` : ""}.`;
+  $("text-info").classList.remove("hint-bad");
 }
 
 function textDone(job: TextJob, digests: Digests): void {
@@ -337,8 +344,7 @@ function renderTextVerdict(): void {
 function textError(job: TextJob, message: string): void {
   jobs.delete(job.id);
   if (job !== textJob) return;
-  $("text-info").textContent = `Verity could not hash this text: ${message}`;
-  $("text-info").classList.add("hint-bad");
+  resetTextResults(`Verity could not hash this text: ${message}`, true);
 }
 
 // ------------------------------------------------------------ Wiring

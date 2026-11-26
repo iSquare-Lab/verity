@@ -104,6 +104,12 @@ describe("checking files", () => {
     vi.advanceTimersByTime(500);
     expect(byId("announce").textContent).toBe("a.iso: Matches: the SHA-\u2060256 is identical.");
     expect(byId("announce").getAttribute("role")).toBe("status");
+    // The same verdict again (the checksum pasted again) empties the region first, so it is read again.
+    paste(` ${GOOD}`);
+    vi.advanceTimersByTime(420);
+    expect(byId("announce").textContent).toBe("");
+    vi.advanceTimersByTime(100);
+    expect(byId("announce").textContent).toBe("a.iso: Matches: the SHA-⁠256 is identical.");
   });
 
   it("names the file when none of several pasted lines is for it", async () => {
@@ -122,6 +128,31 @@ describe("checking files", () => {
     paste("not a checksum");
     expect(results()[0].querySelectorAll(".verdict")).toHaveLength(1);
     expect(verdictOf(results()[0])).toMatch(/^Nothing to compare yet/);
+  });
+
+  it("uses a checksum pasted while the file is still being read", async () => {
+    await choose(new File(["x"], "a.iso"));
+    paste(BAD);
+    expect(results()[0].querySelector(".verdict")).toBeNull();
+    finish({sha256: GOOD});
+    expect(verdictOf(results()[0])).toBe("Does not match.");
+  });
+
+  it("keeps the picks a file started with when they change before it is done", async () => {
+    await choose(new File(["x"], "a.iso"));
+    expect(worker().hashes().at(-1)!.algorithms).toEqual(["sha256"]);
+    paste("d41d8cd98f00b204e9800998ecf8427e"); // An MD5 value ticks MD5 for what comes next.
+    finish({sha256: GOOD});
+    expect(verdictOf(results()[0])).toBe("MD5 was not computed for this file.");
+    await choose(new File(["x"], "a.iso"));
+    expect(worker().hashes().at(-1)!.algorithms).toEqual(["sha256", "md5"]);
+  });
+
+  it("says which file the only pasted line is for", async () => {
+    paste(`${GOOD}  other.iso`);
+    await choose(new File(["x"], "my.iso"));
+    finish({sha256: GOOD});
+    expect(verdictOf(results()[0])).toBe("The pasted line is for other.iso, not my.iso.");
   });
 
   it("shows a read error on the file's card", async () => {
@@ -168,9 +199,20 @@ describe("hashing text", () => {
     expect(byId("text-info").textContent).toBe("5 B as UTF-8 (2 characters).");
   });
 
-  it("shows an error on the text card instead of failing silently", () => {
+  it("shows an error on the text card instead of failing silently, and clears it on the next text", () => {
+    paste(GOOD);
     typeText("abc");
+    finish({sha256: GOOD});
+    expect(byId("text-digests").children).toHaveLength(1);
+    typeText("abcd");
     expect(() => worker().reply({type: "error", id: worker().hashes().at(-1)!.id, message: "out of memory"})).not.toThrow();
     expect(byId("text-info").textContent).toBe("Verity could not hash this text: out of memory");
+    expect(byId("text-info").classList.contains("hint-bad")).toBe(true);
+    // The previous text's digests and verdict do not stay next to the error.
+    expect(byId("text-digests").children).toHaveLength(0);
+    expect(byId("text-verdict").children).toHaveLength(0);
+    typeText("abcde");
+    expect(byId("text-info").textContent).toBe("5 B as UTF-8.");
+    expect(byId("text-info").classList.contains("hint-bad")).toBe(false);
   });
 });

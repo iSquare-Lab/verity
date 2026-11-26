@@ -5,7 +5,7 @@ import {type Algorithm, byKey, type ExpectedSum, sumFor} from "./algorithms";
 export type Verdict =
   | {kind: "nothing-pasted"}
   | {kind: "unreadable"}
-  | {kind: "no-line"; count: number}
+  | {kind: "no-line"; count: number; otherName?: string}
   | {kind: "not-computed"; algorithm: Algorithm}
   | {kind: "match"; algorithm: Algorithm}
   | {kind: "mismatch"; algorithm: Algorithm; expected: string; at: number};
@@ -30,7 +30,11 @@ export function verdictFor(
   if (!pasted.trim()) return {kind: "nothing-pasted"};
   if (!sums.length) return {kind: "unreadable"};
   const sum = fileName === null ? (sums.length === 1 ? sums[0] : null) : sumFor(sums, fileName);
-  if (!sum) return {kind: "no-line", count: sums.length};
+  if (!sum) {
+    // A single pasted line for another file is named, so the message can say which.
+    const only = sums.length === 1 ? sums[0].fileName : undefined;
+    return only ? {kind: "no-line", count: 1, otherName: only} : {kind: "no-line", count: sums.length};
+  }
   const actual = digests[sum.algorithm];
   if (!actual) return {kind: "not-computed", algorithm: sum.algorithm};
   const at = firstDifference(actual, sum.hex);
@@ -45,6 +49,10 @@ export interface VerdictText {
   expected?: string;
   at?: number;
 }
+
+/** Where two checksums part, in words. */
+const where = (at: number): string =>
+  at === 0 ? "differs from the very first character" : `differs from character ${at + 1} on`;
 
 /** An algorithm name that never breaks at its hyphen ("SHA-" / "256") when the line wraps. */
 export const unbroken = (name: string): string => name.replace("-", "-\u2060");
@@ -74,7 +82,9 @@ export function verdictText(verdict: Verdict, fileName: string | null): VerdictT
           }
         : {
             tone: "info",
-            title: `None of the ${verdict.count} pasted lines names ${fileName}.`,
+            title: verdict.otherName
+              ? `The pasted line is for ${verdict.otherName}, not ${fileName}.`
+              : `None of the ${verdict.count} pasted lines names ${fileName}.`,
             detail: "Check the file name: a browser may have renamed the download, for example to “name (1).iso”. Or paste only the line for this file.",
           };
     case "not-computed": {
@@ -100,8 +110,8 @@ export function verdictText(verdict: Verdict, fileName: string | null): VerdictT
         title: "Does not match.",
         detail:
           fileName === null
-            ? `The ${name} differs from character ${verdict.at + 1} on.`
-            : `The ${name} differs from character ${verdict.at + 1} on. The file is damaged or is not the one published: download it again from the official page.`,
+            ? `The ${name} ${where(verdict.at)}.`
+            : `The ${name} ${where(verdict.at)}. The file is damaged or is not the one published: download it again from the official page.`,
         expected: verdict.expected,
         at: verdict.at,
       };

@@ -38,6 +38,13 @@ describe("reading pasted checksums", () => {
     expect(parseLine(`SHA-1: ${SHA256}`)).toBeNull();
   });
 
+  it("reads a file saved with a byte order mark, and old Mac line ends", () => {
+    expect(parseSums(`﻿${SHA256}  a.iso
+`)).toEqual([{hex: SHA256, algorithm: "sha256", fileName: "a.iso"}]);
+    expect(parseSums(`${SHA256}  a.iso${OTHER}  b.iso`).map((sum) => sum.fileName)).toEqual(["a.iso", "b.iso"]);
+    expect(isSumsList("notes.txt", `${SHA256}  a.iso${OTHER}  b.iso`)).toBe(true);
+  });
+
   it("skips comments and blank lines in a SUMS file", () => {
     const sums = parseSums(`# release 1\n\n${SHA256}  a.iso\r\n${OTHER}  b.iso\n`);
     expect(sums.map((sum) => sum.fileName)).toEqual(["a.iso", "b.iso"]);
@@ -48,8 +55,10 @@ describe("reading pasted checksums", () => {
     expect(sumFor(sums, "a.iso")?.hex).toBe(SHA256);
     expect(sumFor(sums, "c.iso")).toBeNull();
     expect(sumFor(parseSums(SHA256), "anything.bin")?.hex).toBe(SHA256);
-    // A single line is compared even when the browser renamed the download.
-    expect(sumFor(parseSums(`${SHA256}  a.iso`), "a (1).iso")?.hex).toBe(SHA256);
+    // A line naming another file never applies, even when it is the only one.
+    expect(sumFor(parseSums(`${SHA256}  other.iso`), "my.iso")).toBeNull();
+    expect(sumFor(parseSums(`${SHA256}
+${OTHER}  b.iso`), "my.iso")?.hex).toBe(SHA256);
   });
 });
 
