@@ -6,12 +6,12 @@
     <title>Verity · check a download's checksum</title>
     <meta
       name="description"
-      content="Check that a downloaded file is exactly the one its publisher released: SHA-256, SHA-512, SHA-1, MD5 and CRC32, computed in your browser with WebAssembly. Nothing is uploaded."
+      content="Check a download's checksum or hash in your browser: SHA-256, SHA-512, SHA-1, MD5 and CRC32, computed with WebAssembly. Nothing is uploaded."
     />
     <meta name="theme-color" content="#f5f6f3" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0f1312" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   </head>
   <body>
     <a class="skip-link" href="#file-step">Skip to the file</a>
@@ -30,14 +30,14 @@
       </section>
 
       <div class="steps">
-        <section class="card" id="file-step" aria-labelledby="file-title" tabindex="-1">
+        <section class="card file-card" id="file-step" aria-labelledby="file-title" tabindex="-1">
           <h2 class="card-title" id="file-title"><span class="step" aria-hidden="true">1</span>The file</h2>
-          <div class="drop" id="drop">
-            <input type="file" id="file" multiple class="sr-only" />
+          <input type="file" id="file" multiple hidden />
+          <button type="button" class="drop" id="drop" aria-label="Choose a file" aria-describedby="drop-hint">
             <span class="drop-icon" data-icon="file" aria-hidden="true"></span>
-            <p class="drop-title"><label for="file" class="link-like">Choose a file</label> or drop it here</p>
-            <p class="hint">Any size, several at once if you like. Read in pieces, never uploaded.</p>
-          </div>
+            <span class="drop-title"><span class="link-like">Choose a file</span><span class="pointer-only"> or drop it here</span></span>
+            <span class="hint" id="drop-hint">Any size, several at once if you like. Read in pieces, never uploaded.</span>
+          </button>
         </section>
 
         <section class="card" aria-labelledby="sum-title">
@@ -60,7 +60,9 @@
       <section class="card text-card" aria-labelledby="text-title">
         <h2 class="card-title" id="text-title">Or hash some text</h2>
         <label class="field-label" for="text">Text (UTF-8)</label>
-        <textarea id="text" rows="2" spellcheck="false" placeholder="Type or paste text"></textarea>
+        <textarea id="text" rows="2" spellcheck="false" placeholder="Type or paste text" aria-describedby="text-info"></textarea>
+        <p class="hint" id="text-info">Hashed with the algorithms picked under Compute, and compared with a pasted checksum.</p>
+        <div id="text-verdict"></div>
         <dl class="digests" id="text-digests"></dl>
       </section>
 
@@ -72,7 +74,7 @@
         </details>
         <details>
           <summary>Which one should I use?</summary>
-          <p>Use what the download page gives, preferably SHA-256 or SHA-512. MD5 and SHA-1 still catch damaged downloads, but someone determined can make two different files with the same MD5 or SHA-1, so do not rely on them against tampering. CRC32 is the quick check zip and gzip use.</p>
+          <p>Use what the download page gives, preferably <span class="nowrap">SHA-256</span> or <span class="nowrap">SHA-512</span>. MD5 and <span class="nowrap">SHA-1</span> still catch damaged downloads, but someone determined can make two different files with the same MD5 or <span class="nowrap">SHA-1</span>, so do not rely on them against tampering. CRC32 is the quick check zip and gzip use.</p>
         </details>
         <details>
           <summary>Is my file sent anywhere?</summary>
@@ -81,7 +83,11 @@
       </section>
     </main>
 
-    <footer class="footer"><p>Verity is open source (MIT). The checksums are computed by a 6 KB WebAssembly module written in AssemblyScript.</p></footer>
+    <footer class="footer">
+      <p>The checksums are computed by a 6 KB WebAssembly module written in AssemblyScript.</p>
+      <p>© 2026 iSquare Lab · MIT licence · <a href="https://github.com/iSquare-Lab/verity">Source on GitHub</a></p>
+    </footer>
+    <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
     <div class="drop-overlay" id="drop-overlay" hidden aria-hidden="true"><p>Drop to check</p></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

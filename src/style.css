@@ -113,6 +113,10 @@ body {
   font-family: var(--font-mono);
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -285,21 +289,43 @@ body {
 
 /* ---------------------------------------------------------------- Drop zone */
 
+/* The file card fills its grid row; the drop zone takes the height left, so no empty block sits under it. */
+.file-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The whole zone is one button that opens the file picker. */
 .drop {
-  position: relative;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
   gap: 4px;
+  width: 100%;
+  min-height: 180px;
   padding: 28px 16px;
   border: 1.5px dashed var(--border-strong);
   border-radius: 10px;
   background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
 }
 
-.drop:focus-within {
+.drop:hover {
   border-color: var(--accent);
+}
+
+.drop:hover .link-like {
+  color: var(--accent-hover);
+}
+
+.drop:focus-visible {
+  border-color: var(--accent);
+  outline-offset: 3px;
 }
 
 .drop-icon {
@@ -319,9 +345,12 @@ body {
 }
 
 .drop-title {
-  margin: 0;
   font-weight: 600;
   font-size: 16px;
+}
+
+.drop .hint {
+  display: block;
 }
 
 .link-like {
@@ -331,16 +360,6 @@ body {
   cursor: pointer;
 }
 
-.link-like:hover {
-  color: var(--accent-hover);
-}
-
-/* The real input is hidden; its label carries the keyboard focus ring. */
-.drop input:focus-visible + .drop-icon + .drop-title .link-like {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
 
 .hint {
   margin: 6px 0 0;
@@ -425,6 +444,10 @@ textarea::placeholder {
   width: 16px;
   height: 16px;
   accent-color: var(--accent);
+}
+
+.chip b {
+  white-space: nowrap;
 }
 
 .chip > span {
@@ -538,7 +561,7 @@ textarea::placeholder {
   font-size: 15.5px;
 }
 
-.verdict-none .icon {
+.verdict-info .icon {
   color: var(--accent);
 }
 
@@ -576,6 +599,7 @@ p.verdict {
 }
 
 .digest dt {
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 650;
   color: var(--muted);
@@ -624,6 +648,19 @@ p.verdict {
   margin: 0;
 }
 
+.footer p + p {
+  margin-top: 6px;
+}
+
+.footer a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.footer a:hover {
+  color: var(--accent-hover);
+}
+
 .drop-overlay {
   position: fixed;
   inset: 0;
@@ -644,7 +681,32 @@ p.verdict {
   font-weight: 650;
 }
 
-/* ---------------------------------------------------------------- Phone */
+/* ---------------------------------------------------------------- Phone and touch */
+
+/* "Drop it here" means nothing on a touch screen. */
+@media (hover: none) and (pointer: coarse) {
+  .pointer-only {
+    display: none;
+  }
+}
+
+/* Touch targets of at least 40 px. */
+@media (max-width: 600px), (pointer: coarse) {
+  .btn-small {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .drop {
+    min-height: 0;
+  }
+
+  /* Room for the round button the host page puts at the bottom right. */
+  .footer {
+    padding-bottom: 72px;
+  }
+}
 
 @media (max-width: 560px) {
   .digest {
