@@ -41,14 +41,14 @@ npm run bench      # how fast verity.wasm hashes on this machine
 engine of Chrome and Edge, so the page reaches about the same speed there, minus the time to read the file. Measured
 on an x64 PC with Node 24.15:
 
-| Algorithm      | Speed    |
-| -------------- | -------- |
-| CRC32          | 340 MB/s |
-| MD5            | 310 MB/s |
-| SHA-1          | 195 MB/s |
-| SHA-256        | 150 MB/s |
-| SHA-512        | 225 MB/s |
-| All five at once | 45 MB/s |
+| Algorithm        |    Speed |
+| ---------------- | -------: |
+| CRC32            | 340 MB/s |
+| MD5              | 310 MB/s |
+| SHA-1            | 195 MB/s |
+| SHA-256          | 150 MB/s |
+| SHA-512          | 225 MB/s |
+| All five at once |  45 MB/s |
 
 Each algorithm picked adds its own time, so pick only the ones the download page gives (SHA-256 alone by default).
 
