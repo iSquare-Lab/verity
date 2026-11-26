@@ -13,8 +13,10 @@
     "dev": "npm run asbuild && vite",
     "build": "npm run asbuild && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "npm run asbuild && vitest run",
-    "constants": "node scripts/gen-constants.mjs"
+    "test": "npm run asbuild && npm run asbuild:testing && vitest run",
+    "constants": "node scripts/gen-constants.mjs",
+    "asbuild:testing": "asc assembly/testing.ts --outFile build/testing.wasm --runtime stub --noAssert",
+    "bench": "npm run asbuild && node scripts/bench.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

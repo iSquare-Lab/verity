@@ -1,17 +1,7 @@
 // Reads a file in 4 MiB slices and feeds them to verity.wasm, so files of any size are hashed without holding
 // them in memory, and the page stays responsive.
-import {ALGORITHMS, type Algorithm, toHex} from "./algorithms";
-
-interface Exports {
-  memory: WebAssembly.Memory;
-  inputPtr(): number;
-  chunkSize(): number;
-  begin(mask: number): void;
-  update(length: number): void;
-  finish(): void;
-  digestPtr(id: number): number;
-  digestLength(id: number): number;
-}
+import type {Algorithm} from "./algorithms";
+import {digestsOf, feed, imports, maskFor, type VerityWasm} from "./wasm";
 
 export type ToHashWorker = {type: "init"; wasmUrl: string} | {type: "hash"; id: number; blob: Blob; algorithms: Algorithm[]};
 export type FromHashWorker =
@@ -20,34 +10,37 @@ export type FromHashWorker =
   | {type: "done"; id: number; digests: Partial<Record<Algorithm, string>>; seconds: number}
   | {type: "error"; id: number; message: string};
 
-let wasm: Promise<Exports> | null = null;
-const queue: Extract<ToHashWorker, {type: "hash"}>[] = [];
+type HashJob = Extract<ToHashWorker, {type: "hash"}>;
+
+let wasm: Promise<VerityWasm> | null = null;
+const queue: HashJob[] = [];
 let busy = false;
 
-const post = (message: FromHashWorker) => (self as unknown as Worker).postMessage(message);
+function post(message: FromHashWorker): void {
+  // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker's postMessage takes no origin.
+  self.postMessage(message);
+}
 
-async function load(url: string): Promise<Exports> {
-  const imports = {env: {abort: () => {}}};
+async function load(url: string): Promise<VerityWasm> {
   try {
-    return (await WebAssembly.instantiateStreaming(fetch(url), imports)).instance.exports as unknown as Exports;
+    return (await WebAssembly.instantiateStreaming(fetch(url), imports)).instance.exports as unknown as VerityWasm;
   } catch {
+    // Served without the application/wasm type: compile from the bytes instead.
     const bytes = await (await fetch(url)).arrayBuffer();
-    return (await WebAssembly.instantiate(bytes, imports)).instance.exports as unknown as Exports;
+    return (await WebAssembly.instantiate(bytes, imports)).instance.exports as unknown as VerityWasm;
   }
 }
 
-async function run(job: Extract<ToHashWorker, {type: "hash"}>): Promise<void> {
-  const w = await wasm!;
+async function run(job: HashJob): Promise<void> {
+  if (!wasm) throw new Error("verity.wasm was not loaded");
+  const w = await wasm;
   const started = performance.now();
-  const chosen = ALGORITHMS.filter((a) => job.algorithms.includes(a.key));
-  w.begin(chosen.reduce((mask, a) => mask | (1 << a.id), 0));
+  w.begin(maskFor(job.algorithms));
   const chunk = w.chunkSize();
   const total = job.blob.size;
   let lastPost = 0;
   for (let at = 0; at < total; at += chunk) {
-    const bytes = new Uint8Array(await job.blob.slice(at, Math.min(total, at + chunk)).arrayBuffer());
-    new Uint8Array(w.memory.buffer, w.inputPtr(), bytes.length).set(bytes);
-    w.update(bytes.length);
+    feed(w, new Uint8Array(await job.blob.slice(at, Math.min(total, at + chunk)).arrayBuffer()));
     const now = performance.now();
     if (now - lastPost > 100) {
       post({type: "progress", id: job.id, done: Math.min(total, at + chunk), total});
@@ -55,9 +48,7 @@ async function run(job: Extract<ToHashWorker, {type: "hash"}>): Promise<void> {
     }
   }
   w.finish();
-  const digests: Partial<Record<Algorithm, string>> = {};
-  for (const a of chosen) digests[a.key] = toHex(new Uint8Array(w.memory.buffer, w.digestPtr(a.id), w.digestLength(a.id)));
-  post({type: "done", id: job.id, digests, seconds: (performance.now() - started) / 1000});
+  post({type: "done", id: job.id, digests: digestsOf(w, job.algorithms), seconds: (performance.now() - started) / 1000});
 }
 
 async function drain(): Promise<void> {
@@ -74,7 +65,7 @@ async function drain(): Promise<void> {
   busy = false;
 }
 
-self.onmessage = (event: MessageEvent<ToHashWorker>) => {
+self.addEventListener("message", (event: MessageEvent<ToHashWorker>) => {
   const message = event.data;
   if (message.type === "init") {
     wasm = load(message.wasmUrl);
@@ -83,4 +74,4 @@ self.onmessage = (event: MessageEvent<ToHashWorker>) => {
   }
   queue.push(message);
   void drain();
-};
+});
