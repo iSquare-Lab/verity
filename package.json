@@ -16,11 +16,13 @@
     "test": "npm run asbuild && npm run asbuild:testing && vitest run",
     "constants": "node scripts/gen-constants.mjs",
     "asbuild:testing": "asc assembly/testing.ts --outFile build/testing.wasm --runtime stub --noAssert",
-    "bench": "npm run asbuild && node scripts/bench.mjs"
+    "bench": "npm run asbuild && node scripts/bench.mjs",
+    "lint": "oxlint --deny-warnings"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
     "assemblyscript": "^0.28.20",
+    "oxlint": "^1.95.0",
     "typescript": "^6.0.3",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"

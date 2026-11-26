@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "import"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "env": {
+    "browser": true
+  },
+  "ignorePatterns": [
+    "dist",
+    "build",
+    "coverage"
+  ],
+  "rules": {
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": [
+          "**/*.css"
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "assembly/**/*.ts"
+      ],
+      "rules": {
+        "no-loss-of-precision": "off"
+      }
+    }
+  ]
+}

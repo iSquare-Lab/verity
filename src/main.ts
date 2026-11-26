@@ -17,7 +17,11 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
 
 const worker = new Worker(new URL("./hash.worker.ts", import.meta.url), {type: "module"});
 const wasmUrl = new URL("verity.wasm", document.baseURI).href;
-worker.postMessage({type: "init", wasmUrl} satisfies ToHashWorker);
+function send(message: ToHashWorker): void {
+  // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker's postMessage takes no origin.
+  worker.postMessage(message);
+}
+send({type: "init", wasmUrl});
 
 interface Job {
   id: number;
@@ -33,7 +37,7 @@ interface Job {
 const jobs = new Map<number, Job>();
 let nextId = 1;
 
-worker.onmessage = (event: MessageEvent<FromHashWorker>) => {
+worker.addEventListener("message", (event: MessageEvent<FromHashWorker>) => {
   const message = event.data;
   if (message.type === "ready") return;
   const job = jobs.get(message.id);
@@ -48,7 +52,7 @@ worker.onmessage = (event: MessageEvent<FromHashWorker>) => {
     if (job.onDone) job.onDone(message.digests);
     else renderDone(job, message.seconds);
   } else if (message.type === "error") renderError(job, message.message);
-};
+});
 
 function showFatal(text: string): void {
   const box = el("p", "verdict verdict-bad", text);
@@ -128,7 +132,7 @@ function hashFiles(files: FileList | File[]): void {
     const status = el("p", "result-status", "Reading…");
     item.append(head, bar, status);
     $("result-list").prepend(item);
-    worker.postMessage({type: "hash", id: job.id, blob: file, algorithms} satisfies ToHashWorker);
+    send({type: "hash", id: job.id, blob: file, algorithms});
   }
   $("results").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
 }
@@ -233,7 +237,7 @@ function hashText(): void {
     box.replaceChildren(...ALGORITHMS.map((a) => digestRow(a.name, digests[a.key]!)));
   };
   jobs.set(job.id, job);
-  worker.postMessage({type: "hash", id: job.id, blob: new Blob([text]), algorithms: job.algorithms} satisfies ToHashWorker);
+  send({type: "hash", id: job.id, blob: new Blob([text]), algorithms: job.algorithms});
 }
 
 // ------------------------------------------------------------ Wiring

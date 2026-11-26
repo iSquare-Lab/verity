@@ -69,10 +69,12 @@ export function parseSums(text: string): ExpectedSum[] {
   return text.split(/\r?\n/).map(parseLine).filter((sum): sum is ExpectedSum => sum !== null);
 }
 
+/** A file name without its folders: "./dl/a.iso" → "a.iso". */
+const baseName = (name: string) => name.replace(/^.*[\\/]/, "");
+
 /** The checksum that applies to a file: the one naming it, or the only one when none names a file. */
 export function sumFor(sums: readonly ExpectedSum[], fileName: string): ExpectedSum | null {
-  const base = (name: string) => name.replace(/^.*[\\/]/, "").replace(/^\.\//, "");
-  const named = sums.find((sum) => sum.fileName && base(sum.fileName) === base(fileName));
+  const named = sums.find((sum) => sum.fileName && baseName(sum.fileName) === baseName(fileName));
   if (named) return named;
   const unnamed = sums.filter((sum) => !sum.fileName);
   if (unnamed.length === 1) return unnamed[0];
