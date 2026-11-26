@@ -123,7 +123,7 @@ describe("checking files", () => {
     paste(BAD);
     await choose(new File(["x"], "a.iso"));
     finish({sha256: GOOD});
-    expect(verdictOf(results()[0])).toBe("Does not match.");
+    expect(verdictOf(results()[0])).toBe("Does not match: download the file again from its official page.");
     expect(results()[0].querySelector(".expected-line mark")?.textContent).toBe("6"); // The last character differs.
     paste("not a checksum");
     expect(results()[0].querySelectorAll(".verdict")).toHaveLength(1);
@@ -135,7 +135,7 @@ describe("checking files", () => {
     paste(BAD);
     expect(results()[0].querySelector(".verdict")).toBeNull();
     finish({sha256: GOOD});
-    expect(verdictOf(results()[0])).toBe("Does not match.");
+    expect(verdictOf(results()[0])).toBe("Does not match: download the file again from its official page.");
   });
 
   it("keeps the picks a file started with when they change before it is done", async () => {
@@ -159,6 +159,14 @@ describe("checking files", () => {
     await choose(new File(["x"], "a.iso"));
     worker().reply({type: "error", id: worker().hashes().at(-1)!.id, message: "permission denied"});
     expect(results()[0].querySelector(".result-status")?.textContent).toBe("Verity could not read this file: permission denied");
+  });
+
+  it("puts the size and read time next to the name once the file is read", async () => {
+    await choose(new File(["x"], "a.iso"));
+    expect(results()[0].querySelector(".result-status")?.textContent).toBe("Reading…");
+    finish({sha256: GOOD});
+    expect(results()[0].querySelector(".result-status")).toBeNull();
+    expect(results()[0].querySelector(".result-size")?.textContent).toBe("1 B · read in 10 ms");
   });
 });
 

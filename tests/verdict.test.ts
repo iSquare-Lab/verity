@@ -46,7 +46,9 @@ describe("verdictFor", () => {
 
   it("compares text only with a single pasted checksum", () => {
     expect(verdict(GOOD, null)).toEqual({kind: "match", algorithm: "sha256"});
-    expect(verdict(`${GOOD}  a.iso`, null)).toEqual({kind: "match", algorithm: "sha256"});
+    expect(verdict(`${GOOD}  -`, null)).toEqual({kind: "match", algorithm: "sha256"});
+    expect(verdict(`${GOOD}  a.iso`, null)).toEqual({kind: "no-line", count: 1, otherName: "a.iso"});
+    expect(verdictText({kind: "no-line", count: 1, otherName: "a.iso"}, null).title).toBe("The pasted checksum is for a.iso, so this text is not compared.");
     expect(verdict(`${GOOD}  a.iso\n${BAD}  b.iso`, null)).toEqual({kind: "no-line", count: 2});
   });
 });
@@ -66,7 +68,8 @@ describe("verdictText", () => {
   it("reports a match in green and a mismatch in red with the position and the expected value", () => {
     expect(verdictText({kind: "match", algorithm: "sha256"}, "a.iso")).toMatchObject({tone: "good", title: "Matches: the SHA-\u2060256 is identical."});
     const bad = verdictText({kind: "mismatch", algorithm: "sha512", expected: BAD, at: 9}, "a.iso");
-    expect(bad).toMatchObject({tone: "bad", title: "Does not match.", expected: BAD, at: 9});
+    expect(bad).toMatchObject({tone: "bad", title: "Does not match: download the file again from its official page.", expected: BAD, at: 9});
+    expect(verdictText({kind: "mismatch", algorithm: "md5", expected: BAD, at: 9}, null).title).toBe("Does not match.");
     expect(bad.detail).toContain("differs from character 10 on");
     const first = verdictText({kind: "mismatch", algorithm: "sha256", expected: BAD, at: 0}, "a.iso");
     expect(first.detail).toMatch(/^The SHA-⁠256 differs from the very first character. /);

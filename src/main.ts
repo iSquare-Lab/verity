@@ -217,8 +217,11 @@ function updateProgress(job: FileJob, done: number, total: number): void {
 function renderDone(job: FileJob, digests: Digests, seconds: number): void {
   job.digests = digests;
   job.item.querySelector(".bar")?.remove();
-  const speed = seconds > 0.5 ? ` (${formatBytes(job.size / seconds)}/s)` : "";
-  status(job).textContent = `Read ${formatBytes(job.size)} in ${formatDuration(seconds)}${speed}.`;
+  // Once read, the progress line goes; the size, time and speed sit next to the name.
+  const speed = seconds > 0.5 ? ` · ${formatBytes(job.size / seconds)}/s` : "";
+  status(job).remove();
+  const size = job.item.querySelector<HTMLElement>(".result-size")!;
+  size.textContent = `${formatBytes(job.size)} · read in ${formatDuration(seconds)}${speed}`;
   job.item.append(digestList(digests));
   renderVerdict(job);
 }

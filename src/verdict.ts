@@ -29,7 +29,9 @@ export function verdictFor(
 ): Verdict {
   if (!pasted.trim()) return {kind: "nothing-pasted"};
   if (!sums.length) return {kind: "unreadable"};
-  const sum = fileName === null ? (sums.length === 1 ? sums[0] : null) : sumFor(sums, fileName);
+  // Text is compared with a single value naming no file, or naming "-" as `sha256sum` does for typed input.
+  const forText = sums.length === 1 && (!sums[0].fileName || sums[0].fileName === "-") ? sums[0] : null;
+  const sum = fileName === null ? forText : sumFor(sums, fileName);
   if (!sum) {
     // A single pasted line for another file is named, so the message can say which.
     const only = sums.length === 1 ? sums[0].fileName : undefined;
@@ -77,8 +79,10 @@ export function verdictText(verdict: Verdict, fileName: string | null): VerdictT
       return fileName === null
         ? {
             tone: "info",
-            title: `${verdict.count} checksums are pasted, so this text is not compared.`,
-            detail: "Text is compared only when a single checksum is pasted.",
+            title: verdict.otherName
+              ? `The pasted checksum is for ${verdict.otherName}, so this text is not compared.`
+              : `${verdict.count} checksums are pasted, so this text is not compared.`,
+            detail: "Text is compared only with a single pasted value that names no file.",
           }
         : {
             tone: "info",
@@ -107,11 +111,12 @@ export function verdictText(verdict: Verdict, fileName: string | null): VerdictT
       const name = unbroken(byKey(verdict.algorithm).name);
       return {
         tone: "bad",
-        title: "Does not match.",
+        // For a file, the bold line already says what to do.
+        title: fileName === null ? "Does not match." : "Does not match: download the file again from its official page.",
         detail:
           fileName === null
             ? `The ${name} ${where(verdict.at)}.`
-            : `The ${name} ${where(verdict.at)}. The file is damaged or is not the one published: download it again from the official page.`,
+            : `The ${name} ${where(verdict.at)}. The file is damaged, or it is not the one that was published.`,
         expected: verdict.expected,
         at: verdict.at,
       };
